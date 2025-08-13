@@ -6,11 +6,17 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList numericInput actionButton verbatimTextOutput selectInput
+#' @importFrom shiny NS tagList numericInput actionButton verbatimTextOutput selectInput textInput
 mod_work_package_ui <- function(id) {
   ns <- NS(id)
   tagList(
     h3("Project Management"),
+    h4("Project Metadata"),
+    textInput(ns("project_name"), "Project Name", placeholder = "e.g., Serengeti Lions"),
+    textInput(ns("researcher"), "Researcher", placeholder = "e.g., Dr. Jane Goodall"),
+    textInput(ns("species"), "Species", placeholder = "e.g., Panthera leo"),
+    actionButton(ns("save_metadata"), "Save Metadata"),
+    hr(),
     h4("Load Cleaned GPS Data"),
     actionButton(ns("load_data"), "Load Cleaned GPS Data"),
     hr(),
@@ -28,6 +34,7 @@ mod_work_package_ui <- function(id) {
 #' @noRd
 #' @importFrom shiny moduleServer observeEvent reactive req renderPrint reactiveVal updateSelectInput showNotification
 #' @importFrom sf st_read
+#' @importFrom yaml write_yaml
 mod_work_package_server <- function(id, imported_data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -52,6 +59,22 @@ mod_work_package_server <- function(id, imported_data) {
     # Render the list of existing WPs
     output$existing_wps <- renderPrint({
       existing_wps_text()
+    })
+
+    # Handle saving metadata
+    observeEvent(input$save_metadata, {
+      req(input$project_name, input$researcher, input$species)
+
+      metadata <- list(
+        project_name = input$project_name,
+        researcher = input$researcher,
+        species = input$species,
+        timestamp = Sys.time()
+      )
+
+      write_yaml(metadata, "project.yml")
+
+      showNotification("Project metadata saved to project.yml", type = "message")
     })
 
     # Handle creation of a new work package's folders
