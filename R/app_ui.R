@@ -10,7 +10,10 @@ app_ui <- function(request) {
     golem_add_external_resources(),
     # Your application UI logic
     fluidPage(
-      golem::golem_welcome_page() # Remove this line to start building your UI
+      h1("Animal Movement Analysis"),
+      mod_data_import_ui("data_import_1"),
+      hr(),
+      mod_data_viewer_ui("data_viewer_1")
     )
   )
 }
