@@ -6,7 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList fileInput actionButton
+#' @importFrom shiny NS tagList fileInput actionButton numericInput
 mod_data_import_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -16,7 +16,9 @@ mod_data_import_ui <- function(id) {
                 "text/comma-separated-values,text/plain",
                 ".csv")
     ),
-    actionButton(ns("import"), "Import Data")
+    numericInput(ns("source_crs"), "Source EPSG Code", value = 4326),
+    numericInput(ns("target_crs"), "Target Analysis EPSG Code", value = 4326),
+    actionButton(ns("import"), "Import and Process Data")
   )
 }
 
@@ -25,39 +27,42 @@ mod_data_import_ui <- function(id) {
 #' @noRd
 #' @importFrom shiny moduleServer eventReactive req showNotification
 #' @importFrom utils read.csv
-#' @importFrom sf st_as_sf st_write
+#' @importFrom sf st_as_sf st_write st_transform
 mod_data_import_server <- function(id){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
     imported_data <- eventReactive(input$import, {
-      req(input$file)
+      req(input$file, input$source_crs, input$target_crs)
 
       # Read the raw CSV data
       raw_data <- read.csv(input$file$datapath)
 
       # --- Roadmap Alignment (Phase 1) ---
-      # This section converts the imported data to a spatial object
-      # and saves it to the standardized project structure.
 
       # 1. Ensure GPS directory exists
       if (!dir.exists("GPS")) {
         dir.create("GPS")
       }
 
-      # 2. Convert to sf object (assuming x, y columns and WGS84 CRS)
-      # A more robust implementation would allow user to select columns and CRS.
+      # 2. Convert to sf object with user-defined source CRS
       req("x" %in% names(raw_data), "y" %in% names(raw_data))
-      spatial_data <- st_as_sf(raw_data, coords = c("x", "y"), crs = 4326)
+      initial_sf <- st_as_sf(raw_data, coords = c("x", "y"), crs = input$source_crs)
 
-      # 3. Write to GeoPackage file
+      # 3. Transform to the target analysis CRS
+      transformed_sf <- st_transform(initial_sf, crs = input$target_crs)
+
+      # 4. Write transformed data to GeoPackage file
       output_path <- file.path("GPS", "cleaned_tracks.gpkg")
-      st_write(spatial_data, output_path, delete_layer = TRUE)
+      st_write(transformed_sf, output_path, delete_layer = TRUE)
 
-      showNotification(paste("Data imported and saved to", output_path), type = "message")
+      showNotification(
+        paste("Data imported, transformed to EPSG:", input$target_crs, "and saved."),
+        type = "message"
+      )
 
-      # Return the spatial data for use in other modules
-      return(spatial_data)
+      # Return the transformed spatial data
+      return(transformed_sf)
     })
 
     return(imported_data)

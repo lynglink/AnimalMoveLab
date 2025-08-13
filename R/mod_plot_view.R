@@ -24,6 +24,7 @@ mod_plot_view_ui <- function(id) {
 #' @noRd
 #' @importFrom shiny moduleServer observeEvent req updateSelectInput renderPlot
 #' @importFrom ggplot2 ggplot geom_path aes labs theme_minimal
+#' @importFrom sf st_crs
 mod_plot_view_server <- function(id, current_data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -49,7 +50,8 @@ mod_plot_view_server <- function(id, current_data) {
         labs(
           title = "Animal Movement Track",
           x = input$x_col,
-          y = input$y_col
+          y = input$y_col,
+          caption = paste("CRS:", st_crs(data)$input)
         ) +
         theme_minimal()
     })
