@@ -20,9 +20,11 @@ app_ui <- function(request) {
           mod_work_package_ui("work_package_1")
         ),
         mainPanel(
-          mod_plot_view_ui("plot_view_1"),
-          hr(),
-          mod_data_viewer_ui("data_viewer_1")
+          tabsetPanel(
+            tabPanel("Movement Plot", mod_plot_view_ui("plot_view_1")),
+            tabPanel("Data Table", mod_data_viewer_ui("data_viewer_1")),
+            tabPanel("Space-Use Analysis", mod_space_use_ui("space_use_1"))
+          )
         )
       )
     )
