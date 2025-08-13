@@ -23,13 +23,41 @@ mod_data_import_ui <- function(id) {
 #' data_import Server Functions
 #'
 #' @noRd
+#' @importFrom shiny moduleServer eventReactive req showNotification
+#' @importFrom utils read.csv
+#' @importFrom sf st_as_sf st_write
 mod_data_import_server <- function(id){
   moduleServer(id, function(input, output, session){
     ns <- session$ns
 
     imported_data <- eventReactive(input$import, {
       req(input$file)
-      read.csv(input$file$datapath)
+
+      # Read the raw CSV data
+      raw_data <- read.csv(input$file$datapath)
+
+      # --- Roadmap Alignment (Phase 1) ---
+      # This section converts the imported data to a spatial object
+      # and saves it to the standardized project structure.
+
+      # 1. Ensure GPS directory exists
+      if (!dir.exists("GPS")) {
+        dir.create("GPS")
+      }
+
+      # 2. Convert to sf object (assuming x, y columns and WGS84 CRS)
+      # A more robust implementation would allow user to select columns and CRS.
+      req("x" %in% names(raw_data), "y" %in% names(raw_data))
+      spatial_data <- st_as_sf(raw_data, coords = c("x", "y"), crs = 4326)
+
+      # 3. Write to GeoPackage file
+      output_path <- file.path("GPS", "cleaned_tracks.gpkg")
+      st_write(spatial_data, output_path, delete_layer = TRUE)
+
+      showNotification(paste("Data imported and saved to", output_path), type = "message")
+
+      # Return the spatial data for use in other modules
+      return(spatial_data)
     })
 
     return(imported_data)

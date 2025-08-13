@@ -10,16 +10,15 @@
 mod_work_package_ui <- function(id) {
   ns <- NS(id)
   tagList(
-    h3("Work Package Management"),
-    h4("Create New Work Package"),
+    h3("Project Management"),
+    h4("Load Cleaned GPS Data"),
+    actionButton(ns("load_data"), "Load Cleaned GPS Data"),
+    hr(),
+    h4("Create New Analysis Work Package"),
     numericInput(ns("wp_number"), "Work Package Number", value = 1, min = 1),
-    actionButton(ns("create_wp"), "Create Work Package and Save Data"),
+    actionButton(ns("create_wp"), "Create WP Folders"),
     hr(),
-    h4("Load from Existing Work Package"),
-    selectInput(ns("select_wp"), "Choose Work Package", choices = NULL),
-    actionButton(ns("load_data"), "Load Data"),
-    hr(),
-    h4("Existing Work Packages"),
+    h4("Existing Analysis Work Packages"),
     verbatimTextOutput(ns("existing_wps"))
   )
 }
@@ -28,7 +27,7 @@ mod_work_package_ui <- function(id) {
 #'
 #' @noRd
 #' @importFrom shiny moduleServer observeEvent reactive req renderPrint reactiveVal updateSelectInput showNotification
-#' @importFrom utils write.csv read.csv
+#' @importFrom sf st_read
 mod_work_package_server <- function(id, imported_data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -38,11 +37,6 @@ mod_work_package_server <- function(id, imported_data) {
     # Reactive to get the list of work packages
     wp_list <- reactive({
       list.dirs("ANALYSES", full.names = FALSE, recursive = FALSE)
-    })
-
-    # Update the select input when the list of work packages changes
-    observeEvent(wp_list(), {
-      updateSelectInput(session, "select_wp", choices = wp_list())
     })
 
     # Reactive to format the list of existing WPs for display
@@ -60,34 +54,23 @@ mod_work_package_server <- function(id, imported_data) {
       existing_wps_text()
     })
 
-    # Handle creation of a new work package
+    # Handle creation of a new work package's folders
     observeEvent(input$create_wp, {
       req(input$wp_number)
       wp_num <- input$wp_number
-
       create_wp(wp_num)
-
-      req(imported_data())
-      data_to_save <- imported_data()
-      wp_name <- paste0("WP", wp_num)
-      analyses_path <- file.path("ANALYSES", wp_name)
-      output_file <- file.path(analyses_path, "imported_data.csv")
-      write.csv(data_to_save, output_file, row.names = FALSE)
-
-      showNotification(paste("Work Package", wp_num, "created and data saved."), type = "message")
+      showNotification(paste("Work Package", wp_num, "folders created."), type = "message")
     })
 
-    # Handle loading data from a work package
+    # Handle loading the primary cleaned data
     observeEvent(input$load_data, {
-      req(input$select_wp)
-      wp_name <- input$select_wp
-      data_file <- file.path("ANALYSES", wp_name, "imported_data.csv")
+      data_file <- file.path("GPS", "cleaned_tracks.gpkg")
 
       if (file.exists(data_file)) {
-        loaded_data(read.csv(data_file))
-        showNotification(paste("Data loaded from", wp_name), type = "message")
+        loaded_data(st_read(data_file))
+        showNotification(paste("Loaded cleaned data from", data_file), type = "message")
       } else {
-        showNotification(paste("Could not find data file in", wp_name), type = "error")
+        showNotification(paste("Cleaned data file not found at", data_file), type = "error")
       }
     })
 
