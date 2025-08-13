@@ -17,7 +17,8 @@ Imports:
     yaml,
     terra,
     adehabitatHR,
-    sp
+    sp,
+    ctmm
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2
