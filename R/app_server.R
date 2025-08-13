@@ -26,4 +26,6 @@ app_server <- function(input, output, session) {
 
   # Pass the current data to the data viewer module
   mod_data_viewer_server("data_viewer_1", current_data)
+  # Pass the current data to the plot viewer module
+  mod_plot_view_server("plot_view_1", current_data)
 }
