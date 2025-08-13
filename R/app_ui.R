@@ -13,7 +13,9 @@ app_ui <- function(request) {
       h1("Animal Movement Analysis"),
       mod_data_import_ui("data_import_1"),
       hr(),
-      mod_data_viewer_ui("data_viewer_1")
+      mod_data_viewer_ui("data_viewer_1"),
+      hr(),
+      mod_work_package_ui("work_package_1")
     )
   )
 }
