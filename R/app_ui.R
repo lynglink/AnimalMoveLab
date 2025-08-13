@@ -15,6 +15,8 @@ app_ui <- function(request) {
         sidebarPanel(
           mod_data_import_ui("data_import_1"),
           hr(),
+          mod_env_import_ui("env_import_1"),
+          hr(),
           mod_work_package_ui("work_package_1")
         ),
         mainPanel(
