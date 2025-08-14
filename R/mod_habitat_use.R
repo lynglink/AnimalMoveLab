@@ -6,7 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList checkboxGroupInput actionButton verbatimTextOutput
+#' @importFrom shiny NS tagList checkboxGroupInput actionButton verbatimTextOutput plotOutput
 #' @importFrom DT dataTableOutput
 mod_habitat_use_ui <- function(id) {
   ns <- NS(id)
@@ -25,16 +25,21 @@ mod_habitat_use_ui <- function(id) {
     actionButton(ns("fit_rsf"), "Fit RSF Model"),
     hr(),
     h5("RSF Model Summary"),
-    verbatimTextOutput(ns("rsf_summary"))
+    verbatimTextOutput(ns("rsf_summary")),
+    hr(),
+    h4("3. Prediction Map"),
+    p("Generate a map of predicted relative habitat suitability based on the fitted RSF model."),
+    actionButton(ns("predict_map"), "Generate Prediction Map"),
+    plotOutput(ns("prediction_plot"))
   )
 }
 
 #' habitat_use Server Functions
 #'
 #' @noRd
-#' @importFrom shiny moduleServer observeEvent req reactiveVal reactivePoll updateCheckboxGroupInput showNotification renderPrint
+#' @importFrom shiny moduleServer observeEvent req reactiveVal reactivePoll updateCheckboxGroupInput showNotification renderPrint renderPlot
 #' @importFrom DT renderDataTable
-#' @importFrom terra rast
+#' @importFrom terra rast predict plot
 #' @importFrom sf st_drop_geometry st_bbox st_as_sf st_sample
 #' @importFrom stats as.formula glm
 mod_habitat_use_server <- function(id, current_data) {
@@ -42,7 +47,9 @@ mod_habitat_use_server <- function(id, current_data) {
     ns <- session$ns
 
     analysis_data <- reactiveVal(NULL)
+    rsf_model_obj <- reactiveVal(NULL)
     rsf_summary_text <- reactiveVal("RSF model summary will be shown here.")
+    prediction_raster <- reactiveVal(NULL)
 
     # Poll for changes in the RASTERS directory to update raster list
     available_rasters <- reactivePoll(1000, session,
@@ -127,6 +134,9 @@ mod_habitat_use_server <- function(id, current_data) {
         data = model_data
       )
 
+      # Store the model object
+      rsf_model_obj(rsf_model)
+
       # Capture and store summary
       summary_capture <- capture.output(summary(rsf_model))
       rsf_summary_text(paste(summary_capture, collapse = "\n"))
@@ -134,6 +144,29 @@ mod_habitat_use_server <- function(id, current_data) {
 
     output$rsf_summary <- renderPrint({
       rsf_summary_text()
+    })
+
+    # Prediction Map Logic
+    observeEvent(input$predict_map, {
+      req(rsf_model_obj(), input$raster_layers)
+
+      showNotification("Generating prediction map...", type = "message")
+
+      # Load the raster stack used for the model
+      raster_paths <- file.path("RASTERS", input$raster_layers)
+      raster_stack <- rast(raster_paths)
+      names(raster_stack) <- tools::file_path_sans_ext(input$raster_layers)
+
+      # Use terra::predict
+      pred_map <- predict(raster_stack, rsf_model_obj(), type = "response")
+
+      prediction_raster(pred_map)
+      showNotification("Prediction map generated.", type = "message")
+    })
+
+    output$prediction_plot <- renderPlot({
+      req(prediction_raster())
+      plot(prediction_raster(), main = "Predicted Habitat Suitability")
     })
 
   })
