@@ -6,7 +6,7 @@
 #'
 #' @noRd
 #'
-#' @importFrom shiny NS tagList actionButton verbatimTextOutput downloadButton selectInput fluidRow column
+#' @importFrom shiny NS tagList actionButton verbatimTextOutput downloadButton selectInput fluidRow column tableOutput plotOutput
 mod_space_use_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -27,25 +27,33 @@ mod_space_use_ui <- function(id) {
     h5("Export Home Range Polygons"),
     p("Exports the most recently calculated home range as a Shapefile."),
     selectInput(ns("wp_export_target"), "Select WP for Server-Side Save", choices = NULL),
-    downloadButton(ns("export_poly"), "Download Shapefile")
+    downloadButton(ns("export_poly"), "Download Shapefile"),
+    hr(),
+    h4("Comparison of Estimators"),
+    h5("Area Comparison Table"),
+    tableOutput(ns("comparison_table")),
+    h5("Map Comparison"),
+    plotOutput(ns("comparison_plot"))
   )
 }
 
 #' space_use Server Functions
 #'
 #' @noRd
-#' @importFrom shiny moduleServer observeEvent eventReactive req reactiveVal renderPrint downloadHandler updateSelectInput reactivePoll showNotification
+#' @importFrom shiny moduleServer observeEvent eventReactive req reactiveVal renderPrint downloadHandler updateSelectInput reactivePoll showNotification renderTable renderPlot
 #' @importFrom sf st_coordinates st_as_sf st_write
 #' @importFrom sp SpatialPointsDataFrame
 #' @importFrom adehabitatHR mcp kernelUD kernel.area getverticeshr
 #' @importFrom ctmm as.telemetry variogram ctmm.guess ctmm.fit akde
+#' @importFrom ggplot2 ggplot geom_sf aes theme_minimal labs scale_fill_viridis_d
 mod_space_use_server <- function(id, current_data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     results_text <- reactiveVal("Results will be shown here.")
     akde_summary_text <- reactiveVal("AKDE model summary will be shown here.")
-    home_range_poly <- reactiveVal(NULL)
+    home_range_poly <- reactiveVal(NULL) # for single download
+    all_hr_results <- reactiveVal(list()) # for comparison
 
     # Poll for changes in the OUTPUT directory to update WP selector
     wp_list <- reactivePoll(1000, session,
@@ -86,10 +94,16 @@ mod_space_use_server <- function(id, current_data) {
       akde_summary_text("")
 
       mcp_poly <- mcp(sp_data(), percent = 95)
-      home_range_poly(st_as_sf(mcp_poly)) # Store sf object
+      mcp_sf <- st_as_sf(mcp_poly)
+      home_range_poly(mcp_sf)
 
       area_m2 <- mcp_poly$area
       area_ha <- area_m2 / 10000
+
+      # Add to results list
+      new_res <- list(method = "MCP", area_m2 = area_m2, area_ha = area_ha, poly = mcp_sf)
+      all_hr_results(c(all_hr_results(), list(new_res)))
+
       results_text(paste("MCP (95%) Area:", round(area_m2, 2), "m^2 |", round(area_ha, 2), "hectares"))
     })
 
@@ -101,11 +115,17 @@ mod_space_use_server <- function(id, current_data) {
 
       kde_ud <- kernelUD(sp_data(), h = "href")
       kde_poly <- getverticeshr(kde_ud, percent = 95)
-      home_range_poly(st_as_sf(kde_poly)) # Store sf object
+      kde_sf <- st_as_sf(kde_poly)
+      home_range_poly(kde_sf)
 
-      kde_area_m2 <- kernel.area(kde_ud, percent = 95)
-      area_ha <- kde_area_m2$`95` / 10000
-      results_text(paste("KDE (95%) Area:", round(kde_area_m2$`95`, 2), "m^2 |", round(area_ha, 2), "hectares"))
+      area_m2 <- kernel.area(kde_ud, percent = 95)$`95`
+      area_ha <- area_m2 / 10000
+
+      # Add to results list
+      new_res <- list(method = "KDE", area_m2 = area_m2, area_ha = area_ha, poly = kde_sf)
+      all_hr_results(c(all_hr_results(), list(new_res)))
+
+      results_text(paste("KDE (95%) Area:", round(area_m2, 2), "m^2 |", round(area_ha, 2), "hectares"))
     })
 
     # AKDE Calculation
@@ -128,11 +148,17 @@ mod_space_use_server <- function(id, current_data) {
 
       akde_summary_text("Calculating AKDE home range...")
       akde_result <- akde(telemetry_data, fit)
-      home_range_poly(st_as_sf(akde_result)) # Store sf object
+      akde_sf <- st_as_sf(akde_result)
+      home_range_poly(akde_sf)
 
-      akde_area_m2 <- summary(akde_result)$CI[2]
-      akde_area_ha <- akde_area_m2 / 10000
-      results_text(paste("AKDE (95%) Area:", round(akde_area_m2, 2), "m^2 |", round(akde_area_ha, 2), "hectares"))
+      area_m2 <- summary(akde_result)$CI[2]
+      area_ha <- area_m2 / 10000
+
+      # Add to results list
+      new_res <- list(method = "AKDE", area_m2 = area_m2, area_ha = area_ha, poly = akde_sf)
+      all_hr_results(c(all_hr_results(), list(new_res)))
+
+      results_text(paste("AKDE (95%) Area:", round(area_m2, 2), "m^2 |", round(area_ha, 2), "hectares"))
 
       summary_capture <- capture.output(summary(fit))
       akde_summary_text(paste(summary_capture, collapse = "\n"))
@@ -144,6 +170,25 @@ mod_space_use_server <- function(id, current_data) {
 
     output$akde_summary <- renderPrint({
       akde_summary_text()
+    })
+
+    # Comparison Table
+    output$comparison_table <- renderTable({
+      req(length(all_hr_results()) > 0)
+
+      # Convert list of results to a data frame
+      results_df <- do.call(rbind, lapply(all_hr_results(), function(res) {
+        data.frame(
+          Method = res$method,
+          Area_m2 = res$area_m2,
+          Area_ha = res$area_ha
+        )
+      }))
+
+      # Clean up names for display
+      names(results_df) <- c("Method", "Area (m^2)", "Area (hectares)")
+
+      results_df
     })
 
     # Download Handler
@@ -176,6 +221,29 @@ mod_space_use_server <- function(id, current_data) {
         )
       }
     )
+
+    # Comparison Plot
+    output$comparison_plot <- renderPlot({
+      req(length(all_hr_results()) > 0, current_data())
+
+      # Combine all polygons into one sf data frame for plotting
+      all_polys <- do.call(rbind, lapply(all_hr_results(), function(res) {
+        # Add a method column to the sf object
+        res$poly$method <- res$method
+        res$poly
+      }))
+
+      ggplot() +
+        geom_sf(data = current_data(), alpha = 0.5, color = "grey50") +
+        geom_sf(data = all_polys, aes(fill = method), alpha = 0.4) +
+        scale_fill_viridis_d(name = "Estimator") +
+        labs(
+          title = "Home Range Comparison",
+          subtitle = "Displaying all calculated home range polygons.",
+          caption = paste("CRS:", st_crs(current_data())$input)
+        ) +
+        theme_minimal()
+    })
 
   })
 }
