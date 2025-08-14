@@ -30,7 +30,14 @@ mod_habitat_use_ui <- function(id) {
     h4("3. Prediction Map"),
     p("Generate a map of predicted relative habitat suitability based on the fitted RSF model."),
     actionButton(ns("predict_map"), "Generate Prediction Map"),
-    plotOutput(ns("prediction_plot"))
+    plotOutput(ns("prediction_plot")),
+    hr(),
+    h4("4. Step Selection Function (SSF)"),
+    p("Fit a conditional logistic regression model to model habitat selection as a function of movement steps."),
+    actionButton(ns("fit_ssf"), "Fit SSF Model"),
+    hr(),
+    h5("SSF Model Summary"),
+    verbatimTextOutput(ns("ssf_summary"))
   )
 }
 
@@ -40,8 +47,9 @@ mod_habitat_use_ui <- function(id) {
 #' @importFrom shiny moduleServer observeEvent req reactiveVal reactivePoll updateCheckboxGroupInput showNotification renderPrint renderPlot
 #' @importFrom DT renderDataTable
 #' @importFrom terra rast predict plot
-#' @importFrom sf st_drop_geometry st_bbox st_as_sf st_sample
+#' @importFrom sf st_drop_geometry st_bbox st_as_sf st_sample st_crs
 #' @importFrom stats as.formula glm
+#' @importFrom amt make_track steps random_steps extract_covariates fit_clogit
 mod_habitat_use_server <- function(id, current_data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -50,6 +58,7 @@ mod_habitat_use_server <- function(id, current_data) {
     rsf_model_obj <- reactiveVal(NULL)
     rsf_summary_text <- reactiveVal("RSF model summary will be shown here.")
     prediction_raster <- reactiveVal(NULL)
+    ssf_summary_text <- reactiveVal("SSF model summary will be shown here.")
 
     # Poll for changes in the RASTERS directory to update raster list
     available_rasters <- reactivePoll(1000, session,
@@ -167,6 +176,61 @@ mod_habitat_use_server <- function(id, current_data) {
     output$prediction_plot <- renderPlot({
       req(prediction_raster())
       plot(prediction_raster(), main = "Predicted Habitat Suitability")
+    })
+
+    # SSF Model Fitting Logic
+    observeEvent(input$fit_ssf, {
+      req(current_data(), input$raster_layers)
+
+      ssf_summary_text("Fitting SSF model (this may take a while)...")
+
+      tryCatch({
+        # 1. Create track
+        # Assuming x, y, timestamp columns exist and ID is the first column
+        req("timestamp" %in% names(current_data()), "x" %in% names(current_data()), "y" %in% names(current_data()))
+        track <- make_track(
+          st_drop_geometry(current_data()),
+          .x = x, .y = y, .t = timestamp,
+          id = current_data()[[1]],
+          crs = st_crs(current_data())
+        )
+
+        # 2. Generate steps
+        # Using a default resampling rate and number of random steps for now
+        steps <- steps(track)
+        random_steps <- random_steps(steps, n_control = 10)
+
+        # 3. Extract Covariates
+        # Load the raster stack used for the model
+        raster_paths <- file.path("RASTERS", input$raster_layers)
+        raster_stack <- rast(raster_paths)
+        names(raster_stack) <- tools::file_path_sans_ext(input$raster_layers)
+
+        steps_with_covs <- extract_covariates(random_steps, raster_stack)
+
+        # 4. Fit Model
+        # Formula includes movement parameters (step length, turning angle)
+        # and habitat covariates.
+        model_formula <- paste(
+          "case_ ~",
+          paste(names(raster_stack), collapse = " + "),
+          "+ cos(ta_) + sl_ + log(sl_)"
+        )
+
+        ssf_model <- fit_clogit(steps_with_covs, as.formula(model_formula))
+
+        # 5. Display Summary
+        summary_capture <- capture.output(summary(ssf_model))
+        ssf_summary_text(paste(summary_capture, collapse = "\n"))
+
+      }, error = function(e) {
+        ssf_summary_text(paste("Error fitting SSF model:", e$message))
+        showNotification("Error fitting SSF model.", type = "error")
+      })
+    })
+
+    output$ssf_summary <- renderPrint({
+      ssf_summary_text()
     })
 
   })
