@@ -24,8 +24,13 @@ app_server <- function(input, output, session) {
     current_data(data_from_wp())
   })
 
+  # Data from the environmental import module
+  mod_env_import_server("env_import_1")
+
   # Pass the current data to the data viewer module
   mod_data_viewer_server("data_viewer_1", current_data)
   # Pass the current data to the plot viewer module
   mod_plot_view_server("plot_view_1", current_data)
+  # Pass the current data to the space-use module
+  mod_space_use_server("space_use_1", current_data)
 }
