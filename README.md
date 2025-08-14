@@ -43,6 +43,12 @@ The application currently supports the foundational steps of a typical movement 
     *   Visualize and compare all calculated home range polygons on a single map, overlaid on the movement track.
     *   Export any calculated home range polygon as a Shapefile for use in GIS software.
 
+*   **Habitat Use & Selection:**
+    *   Extract environmental covariate data for both used and available points.
+    *   Fit Resource Selection Function (RSF) models to analyze habitat selection.
+    *   Generate prediction maps of relative habitat suitability.
+    *   Fit Step-Selection Function (SSF) models to analyze fine-scale habitat selection in relation to movement.
+
 ## Quick Start Guide
 
 1.  **Launch the Application.**
@@ -58,11 +64,8 @@ The application currently supports the foundational steps of a typical movement 
 7.  **Import Environmental Data:** In the sidebar, use the "Import Environmental Layer" section to upload GeoTIFF files for your study area.
 8.  **Extract Covariates:** Navigate to the "Habitat Use" tab. Select the desired raster layers and click "Extract Covariate Data" to append the environmental data to your tracking data.
 9.  **Analyze Space-Use:** Navigate to the "Space-Use Analysis" tab. Click the buttons to calculate MCP, KDE, and/or AKDE. View the results in the table and map, and export the polygons using the download button.
+10. **Analyze Habitat Use:** Navigate to the "Habitat Use" tab to run RSF or SSF analyses and generate prediction maps.
 
 ## Future Work
 
-This application is under active development. Upcoming features, as defined in the project roadmap, include:
-*   **Phase 2: Environmental Layers Integration** (DEMs, vegetation rasters)
-*   **Phase 3: Core Space-Use Analyses** (AKDE, MCP, KDE)
-*   **Phase 4: Habitat Use & Selection** (RSF, SSF)
-*   And much more, including advanced movement analysis, reporting, and UX enhancements.
+This application is under active development. Future enhancements may include advanced movement analysis, reporting, and user experience improvements.
