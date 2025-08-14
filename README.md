@@ -6,6 +6,10 @@ Animal MoveLab is a local-first Shiny/Golem platform designed for animal movemen
 
 The application is built incrementally, following a detailed project roadmap, to ensure that each feature is modular and well-defined.
 
+## Installation
+
+See [INSTALL.md](INSTALL.md) for setup and run instructions.
+
 ## Current Features
 
 The application currently supports the foundational steps of a typical movement analysis workflow:
