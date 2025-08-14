@@ -31,6 +31,18 @@ The application currently supports the foundational steps of a typical movement 
     *   The plot automatically displays the CRS of the data, providing clear visual feedback.
     *   View the raw data in a searchable, sortable table.
 
+*   **Environmental Data Integration:**
+    *   Import environmental data as GeoTIFF raster layers (e.g., DEM, land cover).
+    *   Reproject environmental layers to the common project analysis CRS.
+    *   Extract covariate values from multiple raster layers at each GPS location.
+
+*   **Core Space-Use Analysis:**
+    *   Calculate classic home range estimators: Minimum Convex Polygon (MCP) and Kernel Density Estimation (KDE).
+    *   Calculate modern, statistically robust home ranges using Autocorrelated Kernel Density Estimation (AKDE) via the `ctmm` package.
+    *   View and compare area estimates for all calculated home ranges in a summary table.
+    *   Visualize and compare all calculated home range polygons on a single map, overlaid on the movement track.
+    *   Export any calculated home range polygon as a Shapefile for use in GIS software.
+
 ## Quick Start Guide
 
 1.  **Launch the Application.**
@@ -43,6 +55,9 @@ The application currently supports the foundational steps of a typical movement 
 4.  **View Data:** The movement track plot and data table will automatically update with the imported and transformed data. Note the CRS displayed in the plot's caption.
 5.  **Create Analysis Folders:** In the "Project Management" panel, enter a number and click "Create WP Folders" to create standardized directories for storing analysis outputs.
 6.  **Reload Data:** In future sessions, you can click "Load Cleaned GPS Data" to load the processed `cleaned_tracks.gpkg` file directly without needing to re-import the raw CSV.
+7.  **Import Environmental Data:** In the sidebar, use the "Import Environmental Layer" section to upload GeoTIFF files for your study area.
+8.  **Extract Covariates:** Navigate to the "Habitat Use" tab. Select the desired raster layers and click "Extract Covariate Data" to append the environmental data to your tracking data.
+9.  **Analyze Space-Use:** Navigate to the "Space-Use Analysis" tab. Click the buttons to calculate MCP, KDE, and/or AKDE. View the results in the table and map, and export the polygons using the download button.
 
 ## Future Work
 
