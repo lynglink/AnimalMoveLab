@@ -37,7 +37,12 @@ mod_habitat_use_ui <- function(id) {
     actionButton(ns("fit_ssf"), "Fit SSF Model"),
     hr(),
     h5("SSF Model Summary"),
-    verbatimTextOutput(ns("ssf_summary"))
+    verbatimTextOutput(ns("ssf_summary")),
+    hr(),
+    h4("5. Predicted UD from SSF"),
+    p("Simulate a path based on the fitted SSF model to generate a predicted Utilization Distribution (UD)."),
+    actionButton(ns("simulate_ud"), "Simulate & Plot UD from SSF"),
+    plotOutput(ns("ud_plot"))
   )
 }
 
@@ -49,7 +54,7 @@ mod_habitat_use_ui <- function(id) {
 #' @importFrom terra rast predict plot
 #' @importFrom sf st_drop_geometry st_bbox st_as_sf st_sample st_crs
 #' @importFrom stats as.formula glm
-#' @importFrom amt make_track steps random_steps extract_covariates fit_clogit
+#' @importFrom amt make_track steps random_steps extract_covariates fit_clogit log_rss simulate_path rasterize_path
 mod_habitat_use_server <- function(id, current_data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
@@ -58,7 +63,9 @@ mod_habitat_use_server <- function(id, current_data) {
     rsf_model_obj <- reactiveVal(NULL)
     rsf_summary_text <- reactiveVal("RSF model summary will be shown here.")
     prediction_raster <- reactiveVal(NULL)
+    ssf_model_obj <- reactiveVal(NULL)
     ssf_summary_text <- reactiveVal("SSF model summary will be shown here.")
+    ud_raster <- reactiveVal(NULL)
 
     # Poll for changes in the RASTERS directory to update raster list
     available_rasters <- reactivePoll(1000, session,
@@ -219,7 +226,8 @@ mod_habitat_use_server <- function(id, current_data) {
 
         ssf_model <- fit_clogit(steps_with_covs, as.formula(model_formula))
 
-        # 5. Display Summary
+        # 5. Store model and display summary
+        ssf_model_obj(ssf_model)
         summary_capture <- capture.output(summary(ssf_model))
         ssf_summary_text(paste(summary_capture, collapse = "\n"))
 
@@ -231,6 +239,41 @@ mod_habitat_use_server <- function(id, current_data) {
 
     output$ssf_summary <- renderPrint({
       ssf_summary_text()
+    })
+
+    # SSF Prediction/Simulation Logic
+    observeEvent(input$simulate_ud, {
+      req(ssf_model_obj(), input$raster_layers, current_data())
+
+      showNotification("Simulating predicted UD from SSF...", type = "message")
+
+      tryCatch({
+        # Load the raster stack used for the model
+        raster_paths <- file.path("RASTERS", input$raster_layers)
+        raster_stack <- rast(raster_paths)
+        names(raster_stack) <- tools::file_path_sans_ext(input$raster_layers)
+
+        # Calculate log_rss
+        log_rss <- log_rss(raster_stack, ssf_model_obj())
+
+        # Simulate path
+        # Note: This can be slow. n_steps is kept low for a demo.
+        sim_path <- simulate_path(log_rss, n_steps = 1000)
+
+        # Rasterize path to get UD
+        sim_ud <- rasterize_path(sim_path, raster_stack[[1]])
+
+        ud_raster(sim_ud)
+        showNotification("Predicted UD generated.", type = "message")
+
+      }, error = function(e) {
+        showNotification(paste("Error generating UD:", e$message), type = "error")
+      })
+    })
+
+    output$ud_plot <- renderPlot({
+      req(ud_raster())
+      plot(ud_raster(), main = "Predicted UD from SSF")
     })
 
   })
