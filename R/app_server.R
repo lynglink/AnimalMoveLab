@@ -35,4 +35,19 @@ app_server <- function(input, output, session) {
   mod_space_use_server("space_use_1", current_data)
   # Pass the current data to the habitat-use module
   mod_habitat_use_server("habitat_use_1", current_data)
+
+  # Debug Info Output
+  output$debug_output <- renderPrint({
+    cat("--- R Session Info ---\\n")
+    print(sessionInfo())
+    cat("\\n--- Shiny Options ---\\n")
+    max_size_bytes <- getOption("shiny.maxRequestSize")
+    max_size_mb <- if (!is.null(max_size_bytes)) {
+      round(max_size_bytes / (1024^2), 2)
+    } else {
+      "Not Set"
+    }
+    cat(paste("shiny.maxRequestSize (bytes):", max_size_bytes, "\\n"))
+    cat(paste("shiny.maxRequestSize (MB):", max_size_mb, "\\n"))
+  })
 }
