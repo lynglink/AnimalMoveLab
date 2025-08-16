@@ -7,6 +7,8 @@
 app_server <- function(input, output, session) {
   # Set the maximum file upload size to 100MB
   options(shiny.maxRequestSize = 100 * 1024^2)
+  # FOR DEBUGGING: Print the current value to the console
+  cat(paste("Max upload size is set to:", getOption("shiny.maxRequestSize"), "\\n"))
 
   # Your application server logic
   current_data <- reactiveVal()
