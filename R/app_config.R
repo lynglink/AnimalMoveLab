@@ -1,3 +1,7 @@
+# Set the maximum file upload size to 100MB
+# This must be run before the Shiny UI is defined.
+options(shiny.maxRequestSize = 100 * 1024^2)
+
 #' Access files in the current app
 #'
 #' NOTE: If you manually change your package name in the DESCRIPTION,
