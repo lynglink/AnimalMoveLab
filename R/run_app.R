@@ -14,6 +14,9 @@ run_app <- function(
   uiPattern = "/",
   ...
 ) {
+  # Set the maximum file upload size to 100MB
+  options(shiny.maxRequestSize = 100 * 1024^2)
+
   with_golem_options(
     app = shinyApp(
       ui = app_ui,
