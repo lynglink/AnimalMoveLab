@@ -1,0 +1,66 @@
+{
+  "version": "1.2",
+  "settings": [
+    {
+      "id": "source_epsg",
+      "name": "Source EPSG Code",
+      "description": "The EPSG code of the coordinate reference system of the input tracking data (e.g. 4326 for WGS84 longitude/latitude).",
+      "type": "INTEGER",
+      "defaultValue": 4326
+    },
+    {
+      "id": "target_epsg",
+      "name": "Target Analysis EPSG Code",
+      "description": "The EPSG code of the target coordinate reference system for analysis. Data will be reprojected to this CRS (e.g. 32633 for UTM zone 33N).",
+      "type": "INTEGER",
+      "defaultValue": null
+    }
+  ],
+  "dependencies": {
+    "R": [
+      { "name": "shiny" },
+      { "name": "golem" },
+      { "name": "sf" },
+      { "name": "terra" },
+      { "name": "sp" },
+      { "name": "adehabitatHR" },
+      { "name": "ctmm" },
+      { "name": "amt" },
+      { "name": "ggplot2" },
+      { "name": "DT" },
+      { "name": "yaml" },
+      { "name": "config" },
+      { "name": "move" }
+    ]
+  },
+  "license": {
+    "key": "GPL-3.0"
+  },
+  "language": "eng",
+  "keywords": [
+    "animal movement",
+    "home range",
+    "space use",
+    "habitat selection",
+    "MCP",
+    "KDE",
+    "AKDE",
+    "RSF",
+    "SSF",
+    "GPS tracking"
+  ],
+  "people": [
+    {
+      "firstName": "firstname",
+      "middleInitials": null,
+      "lastName": "lastname",
+      "email": "your@email.com",
+      "roles": ["author", "creator"],
+      "orcid": null,
+      "affiliation": null,
+      "affiliationRor": null
+    }
+  ],
+  "references": [],
+  "funding": []
+}
